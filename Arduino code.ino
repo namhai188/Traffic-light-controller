@@ -72,6 +72,11 @@ void setup() {
   dht.begin();
   rtc.begin();
 
+  // Set time and date (manual setup)
+  rtc.setDOW(WEDNESDAY);     // Set day of the week
+  rtc.setTime(8, 58, 10);     // Set hours, minutes, seconds
+  rtc.setDate(7, 6, 2025);   // Date
+
   // Read data from EEPROM
   int addr = 0;
   readIntArrayFromEEPROM(addr, green_times, 8); addr += 8 * sizeof(int);
