@@ -74,8 +74,8 @@ void setup() {
 
   // Set time and date (manual setup)
   rtc.setDOW(WEDNESDAY);     // Set day of the week
-  rtc.setTime(8, 58, 10);     // Set hours, minutes, seconds
-  rtc.setDate(7, 6, 2025);   // Date
+  rtc.setTime(9, 00, 10);     // Set hours, minutes, seconds
+  rtc.setDate(8, 6, 2025);   // Date
 
   // Read data from EEPROM
   int addr = 0;
@@ -142,31 +142,49 @@ void displayNumber(int num) {
 void blinkYellow(int times = 1) {
   turnOffAll();
   for (int i = 0; i < times; i++) {
-    if (digitalRead(switchPin) == HIGH) {
-      turnOffAll();
-      return;
+    unsigned long start = millis();
+
+    while (millis() - start < 1000) { // Bật đèn trong 1 giây
+      if (digitalRead(switchPin) == HIGH) {
+        turnOffAll();
+        return;
+      }
+      digitalWrite(led_yellow, HIGH);
+      updateLCD();
     }
-    digitalWrite(led_yellow, HIGH);
-    updateLCD();
-    delay(1000);
-    digitalWrite(led_yellow, LOW);
-    updateLCD();
-    delay(1000);
+
+    start = millis(); // Reset thời điểm để đếm tiếp
+
+    while (millis() - start < 1000) { // Tắt đèn trong 1 giây
+      if (digitalRead(switchPin) == HIGH) {
+        turnOffAll();
+        return;
+      }
+      digitalWrite(led_yellow, LOW);
+      updateLCD();
+    }
   }
 }
 
 // Alternate between displaying time/date and temperature/humidity every 7 seconds
 void updateLCD() {
   static bool lastShowTimeDate = true;
+  static unsigned long lastUpdate = 0;
 
   if (millis() - lastSwitchTime >= 7000) {
     showTimeDate = !showTimeDate;
     lastSwitchTime = millis();
   }
+
+  // Chỉ update LCD mỗi 500ms để tránh nháy
+  if (millis() - lastUpdate < 500) return;
+  lastUpdate = millis();
+
   if (showTimeDate != lastShowTimeDate) {
     lcd.clear();
     lastShowTimeDate = showTimeDate;
   }
+
   if (showTimeDate) {
     lcd.setCursor(0, 0);
     lcd.print("Time: ");
@@ -185,6 +203,7 @@ void updateLCD() {
     lcd.print("%  ");
   }
 }
+
 void loop() {
   // Read timing data from serial input, e.g., from a Python program
   if (Serial.available()) {
@@ -200,7 +219,7 @@ void loop() {
            &green_times[7], &yellow_times[7], &red_times[7], &repeat_counts[7],
            &repeat_count_blink);
 
-          // Save to EEPROM
+    // Save to EEPROM
     int addr = 0;
     writeIntArrayToEEPROM(addr, green_times, 8); addr += 8 * sizeof(int);
     writeIntArrayToEEPROM(addr, yellow_times, 8); addr += 8 * sizeof(int);
@@ -209,24 +228,41 @@ void loop() {
     EEPROM.put(addr, repeat_count_blink);
   }
 
-  // Run light sequences only when switch is LOW
-  if (digitalRead(switchPin) == LOW) {
+  // Check switch status once at the top
+  bool switchState = digitalRead(switchPin);
+
+  if (switchState == LOW) {
     for (int i = 0; i < 8; i++) {
       for (int j = 0; j < repeat_counts[i]; j++) {
+        if (digitalRead(switchPin) == HIGH) {
+          turnOffAll();
+          return;
+        }
         countdown(green_times[i], led_green);
+        if (digitalRead(switchPin) == HIGH) {
+          turnOffAll();
+          return;
+        }
         countdown(yellow_times[i], led_yellow);
+        if (digitalRead(switchPin) == HIGH) {
+          turnOffAll();
+          return;
+        }
         countdown(red_times[i], led_red);
       }
     }
-    // Run blinking yellow light if set (once each)
+
     for (int k = 0; k < repeat_count_blink; k++) {
+      if (digitalRead(switchPin) == HIGH) {
+        turnOffAll();
+        return;
+      }
       blinkYellow(1);
     }
   } else {
-    // Turn off all if switch is HIGH
     turnOffAll();
+    delay(100); // Giảm tần suất kiểm tra LCD để tránh chớp tắt
   }
 
-  // Refresh LCD content
   updateLCD();
 }
