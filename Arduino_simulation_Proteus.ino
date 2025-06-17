@@ -14,7 +14,7 @@ DS3231 rtc(SDA, SCL);
 #define DHTTYPE DHT11
 DHT dht(DHTPIN, DHTTYPE);
 
-// Biến thời gian chuyển đổi hiển thị LCD
+// LCD display switching time variable
 unsigned long lastSwitchTime = 0;
 bool showTime = true;
 unsigned long lastLcdUpdate = 0;
@@ -25,13 +25,13 @@ int latchpin = 3;
 int datapin = 4;
 int speed = 1000;
 
-// LED giao thông
+// LED traffic light
 int led_red = 10;
 int led_yellow = 11;
 int led_green = 12;
 int switchPin = 9;
 
-// Mã 7-segment
+// 7-segment
 int segdisp[10] = {
   0b00111111, 0b00000110, 0b01011011, 0b01001111, 0b01100110,
   0b01101101, 0b01111101, 0b00100111, 0b01111111, 0b01101111
@@ -60,7 +60,7 @@ void turnOffAll() {
   digitalWrite(led_green, LOW);
 }
 
-// Countdown với kiểm tra switch và cập nhật LCD
+// Countdown with switch test and LCD update
 void countdown(int start, int led) {
   digitalWrite(led, HIGH);
   for (int z = start; z >= 0; z--) {
@@ -70,7 +70,7 @@ void countdown(int start, int led) {
     }
 
     displayNumber(z);
-    updateLCD();  // Cập nhật LCD trong mỗi vòng lặp
+    updateLCD();  
     delay(speed);
   }
   digitalWrite(led, LOW);
@@ -91,7 +91,7 @@ void blinkYellow(int times) {
   }
 }
 
-// Hàm cập nhật màn hình LCD (luân phiên giữa time/date và temp/humidity)
+// Function to update LCD screen (alternates between time/date and temp/humidity)
 void updateLCD() {
   unsigned long now = millis();
 
@@ -101,7 +101,7 @@ void updateLCD() {
     lastSwitchTime = now;
   }
 
-  if (now - lastLcdUpdate < 500) return; // Giảm cập nhật quá thường xuyên
+  if (now - lastLcdUpdate < 500) return; 
   lastLcdUpdate = now;
 
   if (showTime) {
@@ -142,12 +142,12 @@ void setup() {
   rtc.begin();
   dht.begin();
 
-  // RTC time set - chỉ cần 1 lần
+  // RTC time set 
   rtc.setDOW(WEDNESDAY);
   rtc.setTime(21, 15, 10);
   rtc.setDate(4, 6, 2025);
 
-  // 74HC595 và LED
+  // 74HC595 and LED
   pinMode(latchpin, OUTPUT);
   pinMode(clockpin, OUTPUT);
   pinMode(datapin, OUTPUT);
@@ -159,16 +159,14 @@ void setup() {
 
 void loop() {
   if (digitalRead(switchPin) == LOW) {
-    // Chế độ Trung bình 1 (05:00 - 06:30)
     for (int i = 0; i < 1; i++) { countdown(20, led_green); countdown(3, led_yellow); countdown(15, led_red); }
-    // Các khung giờ còn lại có thể bật lại nếu cần
     for (int i = 0; i < 0; i++) { countdown(30, led_green); countdown(3, led_yellow); countdown(10, led_red); }
     for (int i = 0; i < 0; i++) { countdown(20, led_green); countdown(3, led_yellow); countdown(15, led_red); }
     for (int i = 0; i < 0; i++) { countdown(15, led_green); countdown(3, led_yellow); countdown(20, led_red); }
     for (int i = 0; i < 0; i++) { countdown(20, led_green); countdown(3, led_yellow); countdown(15, led_red); }
     for (int i = 0; i < 0; i++) { countdown(35, led_green); countdown(3, led_yellow); countdown(7, led_red); }
     for (int i = 0; i < 0; i++) { countdown(20, led_green); countdown(3, led_yellow); countdown(15, led_red); }
-    // Đèn vàng nhấp nháy ban đêm (22:00 - 05:00)
+    // Blinking yellow light at night (22:00 - 05:00)
     for (int i = 0; i < 5; i++) { blinkYellow(1); }
   } else {
     turnOffAll();
